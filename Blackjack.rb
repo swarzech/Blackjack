@@ -26,6 +26,16 @@ class Player
     return @card_two.face.to_s + " " + @card_two.suit.to_s
   end
   
+  def print_cards()
+    print("Player has " + show_card_one)
+    print(" " + show_card_two)
+
+    @hit_cards.each { |x| print(" " + x.face.to_s + " " + x.suit.to_s)}
+    print("\n")
+
+    print(" Total : " + @card_total.to_s + "\n")
+  end
+  
   def hit(card)
     @hit_cards << card
     @card_total = @card_total + card.value
@@ -48,12 +58,60 @@ class Player
     @stand = true
   end
   
+  def has_ace()
+    if (@card_one.face == "A" and @card_one.value == 11) or
+       (@card_two.face == "A" and @card_two.value == 11) then
+      return true
+    end
+    
+    result = false
+    @hit_cards.each{|x| result = x.face == "A" and x.value == 11 ? true : result}
+    return result
+  end
+  
+  def reset_ace()
+    if @card_one.face == "A" and @card_one.value == 11 and @card_total > 21 then
+      @card_one.value = 1
+      @card_total = @card_total - 10
+    elsif @card_two.face == "A" and @card_two.value == 11 and @card_total > 21 then
+      @card_two.value = 1
+      @card_total = @card_total - 10
+    else
+      for x in @hit_cards
+        if x.face == "A" and x.value == 11 and @card_total > 21 then
+          x.value = 1
+          @card_total = @card_total - 10
+        end
+      end
+    end
+  end
+  
   def total
     return @@total
   end
   
   def total=(total)
     @@total = total
+  end
+  
+  def hit_action(deck)
+    action = "H"
+    result = "U"
+    while action == "H" and result == "U" do
+      hit(deck.shift)
+      if @card_total > 21 and not has_ace then
+        result = "B"
+      else
+        if @card_total > 21 and has_ace then
+          reset_ace
+        end
+        print_cards
+        print("(H)it (S)tand (E)xit" + "\n")
+        action = gets.to_s.strip
+        result = action == "H" ? "U" : action
+      end
+    end
+    return result
   end
 end
 
@@ -87,34 +145,6 @@ class Dealer
     @hit << card
     @card_total = @card_total + card.value
   end
-end
-
-def print_player_total_cards(print_player)
-  print("Player has " + print_player.show_card_one)
-  print(" " + print_player.show_card_two)
-  
-  print_player.hit_cards.each { |x| print(" " + x.face.to_s + " " + x.suit.to_s)}
-  print("\n")
-  
-  print(" Total : " + print_player.card_total.to_s + "\n")
-end
-
-def player_hits(hit_player)
-  action = "H"
-  while action == "H" do
-    hit_player.hit(deck.shift)
-    if hit_player.card_total > 21 then
-      print("Bust\n")
-      print_player_total_cards(hit_player)
-      exit = true
-      action = "B"
-    else
-      print_player_total_cards(hit_player)
-      print("(H)it (S)tand (E)xit" + "\n")
-      action = gets.to_s.strip
-    end
-  end
-  return action
 end
 
 #setup deck
@@ -171,7 +201,7 @@ while not exit do
   dealer.card_two = deck.shift
   
   print("Dealer has " + dealer.show_card_two + " showing Total : " + dealer.show_card_two_value + "\n")
-  print_player_total_cards(player)
+  player.print_cards
   
   print("(H)it (S)tand (E)xit")
   
@@ -185,22 +215,30 @@ while not exit do
   print("\n")
   action = gets.to_s.strip
   
+  result = "U"
   if action == "S" then
-    print_player_total_cards(player)
-    exit = true
-    action = "S"
+    player.print_cards
+    result = "S"
   elsif action == "H" then
-    action = player_hits(player)
+    result = player.hit_action(deck)
   elsif action == "P" then
     
   elsif action == "D" then
     player.double(deck.shift)
     print("Bet: " + player.bet.to_s + "\n")
     print("Amount avaliable: " + player.total.to_s + "\n")
-    print_player_total_cards(player)
-    exit = true
-    action = player.card_total > 21 ? "B" : "S"
+    player.print_cards
+    result = player.card_total > 21 ? "B" : "S"
   elsif action == "E" then
+    exit = true
+  end
+  
+  if result == "B" then
+    print("Bust\n")
+    player.print_cards
+  elsif result == "S" then
+    player.print_cards
+  elsif result == "E" then
     exit = true
   end
      
